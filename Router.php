@@ -40,6 +40,7 @@
 		}
 
 		public function addAll($exp = '', $call){
+			
 			$exp = '/^'.preg_replace('/\//', '\/', $exp).'(\/|$)/U';
 			isset($this->queue[$exp])
 			? $this->queue[$exp][] = $call
@@ -89,6 +90,7 @@
 		 */
 
 		public function start(){
+			
 			foreach($this->queue as $exp => $routes){
 				if(preg_match($exp, $this->url, $matches)){
 					$next = function() use (&$exp, &$routes, &$matches, &$next){
@@ -105,6 +107,7 @@
 					$next();
 				}
 			}
+			
 		}
 
 	}
