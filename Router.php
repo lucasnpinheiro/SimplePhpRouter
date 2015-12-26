@@ -18,96 +18,103 @@
 
 		}
 
-		public function addGet($exp = '', $call){
+		public function compileRoute($route){
 
-			$_SERVER['REQUEST_METHOD'] == 'GET' && $this->addAll($exp, $call);
-
-		}
-
-		public function addPost($exp = '', $call){
-
-			$_SERVER['REQUEST_METHOD'] == 'POST' && $this->addAll($exp, $call);
+			$route = preg_replace('/\:(\w+)/i', '(?<$1>[^\\/]+)', $route);
+			$route = '/^'.preg_replace('/\//', '\/', $route).'(\/|$)/iU';
+			return $route;
 
 		}
 
-		public function addAjax($exp = '', $call){
+		public function addGet($route = '', $call){
 
-			$import = ['exp' => $exp, 'call' => $call];
+			$_SERVER['REQUEST_METHOD'] == 'GET' && $this->addAll($route, $call);
+
+		}
+
+		public function addPost($route = '', $call){
+
+			$_SERVER['REQUEST_METHOD'] == 'POST' && $this->addAll($route, $call);
+
+		}
+
+		public function addAjax($route = '', $call){
+
+			$import = ['exp' => $route, 'call' => $call];
 			isset($_SERVER['HTTP_X_REQUESTED_WITH'])
 				&& $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'
-				&& $this->addAll($exp, $call);
+				&& $this->addAll($route, $call);
 
 		}
 
-		public function addAll($exp = '', $call){
-			
-			$exp = '/^'.preg_replace('/\//', '\/', $exp).'(\/|$)/U';
-			isset($this->queue[$exp])
-			? $this->queue[$exp][] = $call
-			: $this->queue[$exp] = [$call];
+		protected function addAll($route = '', $call){
+
+			$route = $this->compileRoute($route);
+			$this->queue[] = ['route' => $route, 'call' => $call];
 
 		}
 
-		public function callGet($exp = '', callable $obj = null){
+		public function callGet($route = '', callable $obj = null){
 
-			return $_SERVER['REQUEST_METHOD'] == 'GET' ? $this->callAll($exp, $obj) : false;
-
-		}
-
-		public function callPost($exp = '', callable $obj = null){
-
-			return $_SERVER['REQUEST_METHOD'] == 'POST' ? $this->callAll($exp, $obj) : false;
+			return $_SERVER['REQUEST_METHOD'] == 'GET' ? $this->callAll($route, $obj) : false;
 
 		}
 
-		public function callAjax($exp = '', callable $obj = null){
+		public function callPost($route = '', callable $obj = null){
+
+			return $_SERVER['REQUEST_METHOD'] == 'POST' ? $this->callAll($route, $obj) : false;
+
+		}
+
+		public function callAjax($route = '', callable $obj = null){
 
 			return (isset($_SERVER['HTTP_X_REQUESTED_WITH'])
 				&& $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest')
-				? $this->callAll($exp, $obj) : false;
+				? $this->callAll($route, $obj) : false;
 
 		}
 
 		/**
 		 * @brief Выполняет функцию обратного вызова по заданному маршруту.
-		 * @param $exp Регулярное выражение определяющее маршрут.
+		 * @param $route Регулярное выражение определяющее маршрут.
 		 * @param $obj Функция обратного вызова.
 		 * @return Array
 		 */
 
-		public function callAll($exp = '', callable $obj = null){
+		public function callAll($route = '', callable $obj = null){
 
-			$exp = '/^'.preg_replace('/\//', '\/', $exp).'(\/|$)/U';
-			if(preg_match($exp, $this->url, $matches)){
-				return $obj ? call_user_func($obj, $matches, preg_replace($exp, '', $this->url)) : $matches;
+			$route = $this->compileRoute($route);
+			if(preg_match($route, $this->url, $matches)){
+				return $obj ? call_user_func($obj, $matches, preg_replace($route, '', $this->url)) : $matches;
 			}
 
 		}
 
 		/**
-		 * @brief Запускает обработчики по маршруам.
+		 * @brief Запускает обработчики по текущему маршруту.
 		 * @return Void
 		 */
 
 		public function start(){
-			
-			foreach($this->queue as $exp => $routes){
-				if(preg_match($exp, $this->url, $matches)){
-					$next = function() use (&$exp, &$routes, &$matches, &$next){
-						$call = current($routes);
-						next($routes);
-						if($call instanceOf self){
-							$call->url = '/'.preg_replace($exp, '', $this->url);
-							$call->props = $matches;
-							$call->start();
-						}
-						elseif(is_callable($call))
-							call_user_func($call, $matches, $next);
-					};
-					$next();
+
+			$queue = current($this->queue);
+			if(!$queue) return;
+			next($this->queue);
+			extract($queue, EXTR_REFS);
+
+			if(preg_match($route, $this->url, $matches)){
+
+				if($call instanceOf self){
+					$call->url = '/'.preg_replace($route, '', $this->url);
+					$call->props = $matches;
+					$call->addAll('', [$this, 'start']);
+					$call->start();
 				}
+				elseif(is_callable($call))call_user_func($call, $matches, [$this, 'start']);
+
 			}
-			
+			else $this->start();
+
 		}
 
 	}
