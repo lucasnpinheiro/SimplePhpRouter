@@ -1,5 +1,7 @@
 <?php
 
+	namespace Core;
+
 	class Router{
 
 		protected $url = ''; /**< URL текущего маршрута.*/
@@ -102,15 +104,15 @@
 			next($this->queue);
 			extract($queue, EXTR_REFS);
 
-			if(preg_match($route, $this->url, $matches)){
+			if(preg_match($route, $this->url, $req)){
 
 				if($call instanceOf self){
 					$call->url = '/'.preg_replace($route, '', $this->url);
-					$call->props = $matches;
+					$call->props = $req;
 					$call->addAll('', [$this, 'start']);
 					$call->start();
 				}
-				elseif(is_callable($call))call_user_func($call, $matches, [$this, 'start']);
+				elseif(is_callable($call))call_user_func($call, $req, [$this, 'start']);
 
 			}
 			else $this->start();
