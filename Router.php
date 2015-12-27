@@ -49,7 +49,7 @@
 
 		}
 
-		protected function addAll($route = '', $call){
+		public function addAll($route = '', $call){
 
 			$route = $this->compileRoute($route);
 			$this->queue[] = ['route' => $route, 'call' => $call];
