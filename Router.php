@@ -1,7 +1,5 @@
 <?php
 
-	namespace Core;
-
 	class Router{
 
 		protected $url = ''; /**< URL текущего маршрута.*/
