@@ -116,7 +116,6 @@
 				if($call instanceOf self){
 					$call->url = '/'.preg_replace($route, '', $this->url);
 					$call->props = $req;
-					/* $call->addAll('', [$this, 'start']); */
 					$call->caller = [$this, 'start'];
 					$call->start();
 				}
