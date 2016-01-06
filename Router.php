@@ -4,6 +4,7 @@
 
 		protected $url = ''; /**< URL текущего маршрута.*/
 		protected $props = []; /**< Параметры маршрута.*/
+		protected $caller = [];
 		private $queue = []; /**< Очередь обработчиков.*/
 
 		/**
@@ -18,10 +19,17 @@
 
 		}
 
+		/**
+		 * @brief Переводит описание маршрута в регулярное выражение.
+		 * @param $route Строка описывающая маршрут.
+		 * @return String
+		 */
+
 		public function compileRoute($route){
 
-			$route = preg_replace('/\:(\w+)/i', '(?<$1>[^\\/]+)', $route);
-			$route = '/^'.preg_replace('/\//', '\/', $route).'(\/|$)/iU';
+			$route = preg_replace('/[\/]/', '\/', $route);
+			$route = preg_replace('/\:(\w+)/i', '(?<$1>[^\/]+)', $route);
+			$route = '/^'.$route.'(\/|$)/iU';
 			return $route;
 
 		}
@@ -98,8 +106,9 @@
 		public function start(){
 
 			$queue = current($this->queue);
-			if(!$queue) return;
+			if(!$queue) return is_callable($this->caller) && call_user_func($this->caller);
 			next($this->queue);
+
 			extract($queue, EXTR_REFS);
 
 			if(preg_match($route, $this->url, $req)){
@@ -107,7 +116,7 @@
 				if($call instanceOf self){
 					$call->url = '/'.preg_replace($route, '', $this->url);
 					$call->props = $req;
-					$call->addAll('', [$this, 'start']);
+					$call->caller = [$this, 'start'];
 					$call->start();
 				}
 				elseif(is_callable($call))call_user_func($call, $req, [$this, 'start']);
